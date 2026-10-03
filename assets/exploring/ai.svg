@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 132" width="280" height="132" role="img" aria-label="AI / GenAI: early exploration">
+  <defs>
+    <clipPath id="frame"><rect width="280" height="132" rx="14"/></clipPath>
+    <radialGradient id="g" cx="12%" cy="10%" r="70%"><stop offset="0" stop-color="#5CC8FF" stop-opacity=".16"/><stop offset="1" stop-color="#5CC8FF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="edge" x1="0" x2="1"><stop offset="0" stop-color="#5CC8FF" stop-opacity="0"/><stop offset=".5" stop-color="#5CC8FF" stop-opacity=".9"/><stop offset="1" stop-color="#5CC8FF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <style>
+    .sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif}
+    .mono{font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace}
+    .pulse{animation:pulse 2.6s ease-in-out infinite;animation-delay:-1.30s}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+    .edge{animation:edge 8s ease-in-out infinite;animation-delay:-4s}
+    @keyframes edge{0%{transform:translateX(-120px)}50%,100%{transform:translateX(280px)}}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+  </style>
+  <g clip-path="url(#frame)">
+    <rect width="280" height="132" fill="#0A0E14"/>
+    <rect width="280" height="132" fill="url(#g)"/>
+    <rect class="edge" x="0" y="0" width="120" height="1.5" fill="url(#edge)"/>
+    <g transform="translate(22 22)"><g fill="none" stroke="#5CC8FF" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2z"/><path d="M19 2.5v3M17.5 4h3"/></g></g>
+    <circle class="pulse" cx="256" cy="34" r="3.5" fill="#5CC8FF"/>
+    <text x="22" y="86" class="sans" font-size="20" font-weight="800" fill="#EEF1F5">AI / GenAI</text>
+    <text x="22" y="110" class="mono" font-size="11.5" fill="#7A8594">early exploration</text>
+  </g>
+  <rect x=".5" y=".5" width="279" height="131" rx="13.5" fill="none" stroke="#1A2633"/>
+</svg>
