@@ -77,112 +77,147 @@ async function getContributionsPage() {
 }
 
 function stats(days) {
-  let total = 0, active = 0, longest = 0, run = 0;
+  let total = 0, active = 0, longest = 0, run = 0, best = days[0];
   for (const d of days) {
     total += d.count;
+    if (d.count > best.count) best = d;
     if (d.count > 0) { active++; run++; longest = Math.max(longest, run); } else run = 0;
   }
-  return { total, active, longest };
+  return { total, active, longest, best };
 }
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const fmt = n => n.toLocaleString('en-US');
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const shortDate = iso => { const d = new Date(iso + 'T00:00:00Z'); return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`; };
 
 function render({ repos, languages, days, synced }) {
-  const W = 720, H = 430, A = '#5CC8FF';
+  const W = 720, H = 470, A = '#5CC8FF';
   const s = stats(days);
 
-  // weekly totals, newest bucket ending on the last day of data
+  // ---- tiles ----------------------------------------------------------------
+  const tiles = [
+    ['PUBLIC REPOS', repos.length, ''],
+    ['CONTRIBUTIONS', fmt(s.total), ''],
+    ['ACTIVE DAYS', s.active, ''],
+    ['LONGEST STREAK', s.longest, 'd'],
+    ['BEST DAY', s.best.count, shortDate(s.best.date)],
+  ].map(([label, value, unit], i) => {
+    const w = 128, x = 24 + i * (w + 8);
+    const unitSvg = !unit ? '' : i === 4
+      ? `<tspan dx="6" font-size="10.5" font-weight="400" fill="#5B6675" class="mono" letter-spacing="1">${unit}</tspan>`
+      : `<tspan dx="2" font-size="13" font-weight="400" fill="#5B6675">${unit}</tspan>`;
+    return `<rect x="${x}" y="64" width="${w}" height="78" rx="12" fill="#0A0E14" stroke="#16212C"/>` +
+      `<rect x="${x + 12}" y="64" width="24" height="2" fill="${A}"/>` +
+      `<text x="${x + 12}" y="88" class="mono" font-size="9" fill="#5B6675" letter-spacing="1.4">${label}</text>` +
+      `<text x="${x + 12}" y="126" class="sans" font-size="30" font-weight="800" fill="#EEF1F5">${value}${unitSvg}</text>`;
+  }).join('\n    ');
+
+  // ---- activity log: GitHub's layout, columns are weeks starting Sunday ------
+  const gx0 = 58, gy0 = 196, step = (W - 32 - gx0) / 53, cell = step - 2.6;
+  const offset = new Date(days[0].date + 'T00:00:00Z').getUTCDay();
+  const ramp = ['#111921', '#0F4A69', '#1A77A6', '#38A8DC', A];
+  // like GitHub: shade by quartiles of the active days, not by the single busiest day
+  const nz = days.map(d => d.count).filter(c => c > 0).sort((x, y) => x - y);
+  const q = f => nz[Math.min(nz.length - 1, Math.floor(f * nz.length))] ?? 1;
+  const [q1, q2, q3] = [q(0.25), q(0.5), q(0.75)];
+  const level = c => (c === 0 ? 0 : c <= q1 ? 1 : c <= q2 ? 2 : c <= q3 ? 3 : 4);
+  let cells = '', gmonths = '', lastM = -1, lastW = -9, bestXY = null;
+  days.forEach((d, i) => {
+    const k = i + offset, wk = Math.floor(k / 7), dow = k % 7;
+    const x = gx0 + wk * step, y = gy0 + dow * step;
+    cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cell.toFixed(1)}" height="${cell.toFixed(1)}" rx="2" fill="${ramp[level(d.count)]}"><title>${d.count} on ${d.date}</title></rect>`;
+    if (d === s.best) bestXY = [x + cell / 2, y + cell / 2];
+    const m = new Date(d.date + 'T00:00:00Z').getUTCMonth();
+    if (dow === 0 && m !== lastM && wk - lastW >= 3 && wk < 51) {
+      gmonths += `<text x="${x.toFixed(1)}" y="${gy0 - 8}" class="mono" font-size="9.5" fill="#5B6675" letter-spacing="1">${MON[m]}</text>`;
+      lastM = m; lastW = wk;
+    }
+  });
+  const gridBottom = gy0 + 7 * step;
+  const dayLabels = [[1, 'MON'], [3, 'WED'], [5, 'FRI']].map(([r, t]) =>
+    `<text x="${gx0 - 8}" y="${(gy0 + r * step + cell - 1).toFixed(1)}" class="mono" font-size="8.5" fill="#4F5A69" text-anchor="end">${t}</text>`).join('');
+  const lgX = W - 32 - 34 - 5 * 14;
+  const legend = `<text x="${lgX - 6}" y="${(gridBottom + 19).toFixed(1)}" class="mono" font-size="9" fill="#5B6675" text-anchor="end">LESS</text>` +
+    ramp.map((c, i) => `<rect x="${lgX + i * 14}" y="${(gridBottom + 10).toFixed(1)}" width="10" height="10" rx="2" fill="${c}"/>`).join('') +
+    `<text x="${W - 32}" y="${(gridBottom + 19).toFixed(1)}" class="mono" font-size="9" fill="#5B6675" text-anchor="end">MORE</text>`;
+
+  // ---- weekly strip, kept small -------------------------------------------------
   const weeks = [];
   for (let end = days.length; end > 0 && weeks.length < 52; end -= 7) {
-    const chunk = days.slice(Math.max(0, end - 7), end);
-    weeks.unshift({ start: chunk[0].date, count: chunk.reduce((a, d) => a + d.count, 0) });
+    weeks.unshift(days.slice(Math.max(0, end - 7), end).reduce((a, d) => a + d.count, 0));
   }
-  const cx0 = 32, cx1 = W - 32, cy0 = 200, cy1 = 318;
-  const peak = Math.max(1, ...weeks.map(w => w.count));
+  const cx0 = gx0, cx1 = W - 32, cy0 = gridBottom + 52, cy1 = cy0 + 34;
+  const peak = Math.max(1, ...weeks);
   const px = i => cx0 + (i / (weeks.length - 1)) * (cx1 - cx0);
   const py = c => cy1 - (c / peak) * (cy1 - cy0);
-  const pts = weeks.map((w, i) => `${px(i).toFixed(1)},${py(w.count).toFixed(1)}`);
-  const line = `M${pts.join('L')}`;
+  const line = `M${weeks.map((c, i) => `${px(i).toFixed(1)},${py(c).toFixed(1)}`).join('L')}`;
   const area = `${line}L${cx1},${cy1}L${cx0},${cy1}Z`;
-  const pi = weeks.findIndex(w => w.count === peak);
-  let months = '', lastM = -1;
-  weeks.forEach((w, i) => {
-    const m = new Date(w.start + 'T00:00:00Z').getUTCMonth();
-    if (m !== lastM && i > 0 && i < weeks.length - 2) {
-      months += `<text x="${px(i).toFixed(1)}" y="${cy1 + 20}" class="mono" font-size="10" fill="#4F5A69" letter-spacing="1" text-anchor="middle">${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][m]}</text>`;
-    }
-    lastM = m;
-  });
+  const pi = weeks.indexOf(peak);
 
-  // language share by bytes, top 4 + rest
+  // ---- languages, top 4 + rest -----------------------------------------------------
+  const ly = cy1 + 34;
   const totalBytes = languages.reduce((a, [, b]) => a + b, 0) || 1;
   const top = languages.slice(0, 4);
   const rest = languages.slice(4).reduce((a, [, b]) => a + b, 0);
   if (rest) top.push(['Other', rest]);
   const shades = [A, '#8A94A3', '#5B6675', '#3E4957', '#2A3544'];
-  let bx = 32, bar = '', legend = '', lx = 32;
+  let bx = 32, bar = '', langs = '', lx = 32;
   top.forEach(([name, bytes], i) => {
     const w = Math.max(3, (bytes / totalBytes) * (W - 64));
-    bar += `<rect x="${bx.toFixed(1)}" y="374" width="${(w - 3).toFixed(1)}" height="8" rx="4" fill="${shades[i]}"${i === 0 ? ' filter="url(#glow)"' : ''}/>`;
+    bar += `<rect x="${bx.toFixed(1)}" y="${ly + 10}" width="${(w - 3).toFixed(1)}" height="7" rx="3.5" fill="${shades[i]}"${i === 0 ? ' filter="url(#glow)"' : ''}/>`;
     bx += w;
     const label = `${name} ${((bytes / totalBytes) * 100).toFixed(1)}%`;
-    legend += `<rect x="${lx}" y="398" width="8" height="8" rx="2" fill="${shades[i]}"/><text x="${lx + 14}" y="406" class="mono" font-size="11.5" fill="#9AA6B4" letter-spacing=".6">${esc(label)}</text>`;
-    lx += 30 + label.length * 7.6;
+    langs += `<rect x="${lx}" y="${ly + 30}" width="8" height="8" rx="2" fill="${shades[i]}"/><text x="${lx + 14}" y="${ly + 38}" class="mono" font-size="11" fill="#9AA6B4" letter-spacing=".6">${esc(label)}</text>`;
+    lx += 30 + label.length * 7.3;
   });
-
-  const tiles = [
-    ['PUBLIC REPOS', repos.length, ''],
-    ['CONTRIBUTIONS · 12 MO', fmt(s.total), ''],
-    ['ACTIVE DAYS', s.active, ''],
-    ['LONGEST STREAK', s.longest, ' days'],
-  ].map(([label, value, unit], i) => {
-    const x = 24 + i * 172;
-    return `<rect x="${x}" y="70" width="162" height="84" rx="12" fill="#0A0E14" stroke="#16212C"/>` +
-      `<rect x="${x + 14}" y="70" width="28" height="2" fill="${A}"/>` +
-      `<text x="${x + 14}" y="96" class="mono" font-size="9.5" fill="#5B6675" letter-spacing="1.6">${label}</text>` +
-      `<text x="${x + 14}" y="136" class="sans" font-size="34" font-weight="800" fill="#EEF1F5">${value}<tspan font-size="14" font-weight="400" fill="#5B6675">${unit}</tspan></text>`;
-  }).join('\n    ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="t d">
   <title id="t">Developer telemetry for ${esc(USER)}</title>
-  <desc id="d">${repos.length} public repositories. ${fmt(s.total)} contributions in the last year across ${s.active} active days, longest streak ${s.longest} days, busiest week ${peak}. Languages by bytes: ${top.map(([n, b]) => `${n} ${((b / totalBytes) * 100).toFixed(1)}%`).join(', ')}. Synced ${synced}.</desc>
+  <desc id="d">${repos.length} public repositories. ${fmt(s.total)} contributions in the last year across ${s.active} active days. Longest streak ${s.longest} days. Best day: ${s.best.count} contributions on ${s.best.date}. Busiest week: ${peak}. Languages by bytes: ${top.map(([n, b]) => `${n} ${((b / totalBytes) * 100).toFixed(1)}%`).join(', ')}. Synced ${synced}.</desc>
   <defs>
     <clipPath id="frame"><rect width="${W}" height="${H}" rx="16"/></clipPath>
-    <clipPath id="chart"><rect x="${cx0}" y="${cy0 - 20}" width="${cx1 - cx0}" height="${cy1 - cy0 + 20}"/></clipPath>
-    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A}" stop-opacity=".35"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></linearGradient>
-    <linearGradient id="cursor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A}" stop-opacity="0"/><stop offset=".5" stop-color="${A}" stop-opacity=".9"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></linearGradient>
-    <filter id="glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <clipPath id="chart"><rect x="${cx0}" y="${cy0 - 6}" width="${cx1 - cx0}" height="${cy1 - cy0 + 6}"/></clipPath>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A}" stop-opacity=".3"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></linearGradient>
+    <linearGradient id="cursor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A}" stop-opacity="0"/><stop offset=".5" stop-color="${A}" stop-opacity=".45"/><stop offset="1" stop-color="${A}" stop-opacity="0"/></linearGradient>
+    <filter id="glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
   <style>
     .sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif}
     .mono{font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace}
     .pulse{animation:pulse 2.4s ease-in-out infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+    @keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.2);opacity:0}}
     .scan{animation:scan 9s linear infinite}
     @keyframes scan{0%{transform:translateX(0);opacity:0}5%{opacity:1}95%{opacity:1}100%{transform:translateX(${cx1 - cx0}px);opacity:0}}
-    @media (prefers-reduced-motion:reduce){*{animation:none!important}.scan{opacity:0}}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important}.scan,.ring{opacity:0}}
   </style>
   <g clip-path="url(#frame)">
     <rect width="${W}" height="${H}" fill="#07090C"/>
-    <circle class="pulse" cx="36" cy="38" r="4" fill="${A}"/>
-    <text x="48" y="42" class="mono" font-size="11.5" font-weight="700" fill="${A}" letter-spacing="2">LIVE</text>
-    <text x="${W - 32}" y="42" class="mono" font-size="11" fill="#5B6675" letter-spacing="1.6" text-anchor="end">SYNCED ${esc(synced)} · GITHUB API</text>
+    <circle class="pulse" cx="36" cy="36" r="4" fill="${A}"/>
+    <text x="48" y="40" class="mono" font-size="11.5" font-weight="700" fill="${A}" letter-spacing="2">LIVE</text>
+    <text x="${W - 32}" y="40" class="mono" font-size="11" fill="#5B6675" letter-spacing="1.6" text-anchor="end">SYNCED ${esc(synced)} · GITHUB API</text>
     ${tiles}
-    <text x="32" y="186" class="mono" font-size="10" fill="#5B6675" letter-spacing="1.8">WEEKLY ACTIVITY · 52 WEEKS</text>
-    <text x="${W - 32}" y="186" class="mono" font-size="10" fill="#5B6675" letter-spacing="1.8" text-anchor="end">PEAK ${peak} / WEEK</text>
-    ${[0.25, 0.5, 0.75].map(f => `<path d="M${cx0} ${(cy1 - f * (cy1 - cy0)).toFixed(1)}H${cx1}" stroke="#111922" stroke-dasharray="2 5"/>`).join('')}
+    <text x="32" y="172" class="mono" font-size="10" fill="#5B6675" letter-spacing="1.8">ACTIVITY LOG · ${fmt(s.total)} CONTRIBUTIONS IN THE LAST YEAR</text>
+    ${gmonths}
+    ${dayLabels}
+    ${cells}
+    ${bestXY ? `<circle class="ring" cx="${bestXY[0].toFixed(1)}" cy="${bestXY[1].toFixed(1)}" r="${(cell * 0.75).toFixed(1)}" fill="none" stroke="${A}" stroke-width="1.5"/>` : ''}
+    <text x="${gx0}" y="${(gridBottom + 19).toFixed(1)}" class="mono" font-size="9" fill="#5B6675" letter-spacing="1">BEST DAY · ${s.best.count} ON ${shortDate(s.best.date)}</text>
+    ${legend}
+    <text x="${gx0}" y="${cy0 - 10}" class="mono" font-size="9.5" fill="#5B6675" letter-spacing="1.6">WEEKLY</text>
+    <text x="${W - 32}" y="${cy0 - 10}" class="mono" font-size="9.5" fill="#5B6675" letter-spacing="1.6" text-anchor="end">PEAK ${peak} / WEEK</text>
     <path d="M${cx0} ${cy1}H${cx1}" stroke="#1A2530"/>
     <g clip-path="url(#chart)">
       <path d="${area}" fill="url(#fill)"/>
-      <path d="${line}" fill="none" stroke="${A}" stroke-width="2" stroke-linejoin="round" filter="url(#glow)"/>
-      <rect class="scan" x="${cx0}" y="${cy0 - 20}" width="1.5" height="${cy1 - cy0 + 20}" fill="url(#cursor)"/>
+      <path d="${line}" fill="none" stroke="${A}" stroke-width="1.6" stroke-linejoin="round" filter="url(#glow)"/>
+      <rect class="scan" x="${cx0}" y="${cy0 - 6}" width="1" height="${cy1 - cy0 + 6}" fill="url(#cursor)"/>
     </g>
-    <circle cx="${px(pi).toFixed(1)}" cy="${py(peak).toFixed(1)}" r="4.5" fill="#07090C" stroke="${A}" stroke-width="2"/>
-    ${months}
-    <text x="32" y="362" class="mono" font-size="10" fill="#5B6675" letter-spacing="1.8">LANGUAGES · BY BYTES ACROSS PUBLIC REPOS</text>
+    <circle cx="${px(pi).toFixed(1)}" cy="${py(peak).toFixed(1)}" r="3.5" fill="#07090C" stroke="${A}" stroke-width="1.6"/>
+    <text x="32" y="${ly}" class="mono" font-size="10" fill="#5B6675" letter-spacing="1.8">LANGUAGES · BY BYTES ACROSS PUBLIC REPOS</text>
     ${bar}
-    ${legend}
+    ${langs}
   </g>
   <rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="15.5" fill="none" stroke="#16202B"/>
 </svg>

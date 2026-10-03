@@ -30,7 +30,7 @@
 
 <p align="center">
   <img src="assets/labels/telemetry.svg" width="420" alt="Developer telemetry"><br>
-  <img src="assets/generated/telemetry.svg" width="720" alt="Developer telemetry rendered daily from the GitHub API: public repositories, contributions over 12 months, active days, longest streak, weekly activity over 52 weeks, and language share by bytes.">
+  <img src="assets/generated/telemetry.svg" width="720" alt="Developer telemetry rendered daily from the GitHub API: public repositories, contributions over 12 months, active days, longest streak, best single day, a GitHub-style activity log (contribution heatmap), a small weekly activity line, and language share by bytes.">
 </p>
 
 <br>

@@ -85,8 +85,10 @@ Tuning constants (sphere, ball, segmentation seeds) sit at the top of the script
   is by bytes.
 - Contributions: GraphQL `contributionCalendar` with `GITHUB_TOKEN` (in the
   Action), or the public contributions page (local runs).
-- Weekly activity is the last 52 weeks summed from those days. It's used instead
-  of a heatmap because GitHub already shows the heatmap right under the README.
+- Activity log: a GitHub-style heatmap of the last year (weeks as columns,
+  Sunday first). Cells are shaded by quartiles of the active days, as GitHub
+  does, and the best single day is ringed and listed in the BEST DAY tile.
+- Weekly: a small line of the last 52 weeks, summed from the same days.
 
 ## GitHub compatibility
 
