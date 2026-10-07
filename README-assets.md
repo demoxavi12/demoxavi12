@@ -35,9 +35,9 @@ a dozen, so use `--cached` while you are tweaking the design.
 Preview: open `assets/generated/profile.svg` in a browser. To freeze a moment,
 open the browser console on that tab and run
 `document.getAnimations().forEach(a => { a.pause(); a.currentTime = 4000 })`
-(4000 = 4 s into the loop).
+(4000 = 4 s into the boot).
 
-## The boot sequence (16 s loop)
+## The boot sequence (plays once, ~10 s)
 
 | Time       | What happens                                                            |
 |------------|-------------------------------------------------------------------------|
@@ -51,13 +51,34 @@ open the browser console on that tab and run
 | 4.7–6.1 s  | contributions-per-month bars grow left to right; the peak glows         |
 | 5.9 s      | language share appears                                                  |
 | 6.3–8.6 s  | `$ cat stack.txt` types, then the stack types out                       |
-| 9.0 s      | status flips to ● ONLINE; the status bar appears                        |
-| 9–15.3 s   | hold on the finished profile                                            |
-| 15.3–16 s  | fade out, loop                                                          |
+| 9.0–9.3 s  | status flips to ● ONLINE; the status bar appears                        |
+| 10 s →     | **stops.** The finished profile stays on screen, with nothing moving   |
+
+It plays once. Every animation has `animation-iteration-count: 1` and
+`animation-fill-mode: both`, so it holds its first frame until its cue and its
+last frame forever after. There is no loop, no fade-out and no idle motion
+(no blinking cursor, no pulsing glow). The sequence plays again only when the
+page itself is reloaded, the same as any page that animates in on load.
 
 Every element's resting style is its finished state. So a viewer that does
 not animate, or has reduced motion turned on, sees the complete profile and
 never a blank one.
+
+## Palette
+
+| Role                  | Colour    |
+|-----------------------|-----------|
+| background            | `#0C0B12` near-black, violet-tinted |
+| panels / chrome       | `#08070D` / `#14121D`, borders `#2B2640` |
+| primary               | `#8B5CF6` electric violet |
+| glow / highlights     | `#B79CFF` soft violet |
+| secondary             | `#6366F1` indigo (portrait guides, wave start, 2nd language) |
+| accent, used sparingly| `#7DD3FC` soft cyan |
+| text                  | `#ECE9F5`, secondary `#A6A1B8`, labels `#6F6985` |
+| activity shades       | `#17141F` `#2B1D57` `#4A2E9C` `#7A4FE6` `#B79CFF` |
+
+No GitHub green anywhere. The activity grid keeps GitHub's layout (weeks as
+columns, Sunday first, five shades) so it still reads as a contribution graph.
 
 ## The portrait
 
@@ -70,7 +91,7 @@ never a blank one.
   crossed where they are darkest.
 - **scene:** sparse edges for the ridgelines, clouds and rocks.
 - **guides:** the frame ring, the horizon and the sun.
-- **render:** a green duotone of the avatar, embedded as a small JPEG, that
+- **render:** a violet duotone of the avatar, embedded as a small JPEG, that
   fades in last.
 
 Each path is tagged with its layer and a top-to-bottom order (`data-t`).
@@ -99,9 +120,19 @@ General → Workflow permissions → Read and write**.
 
 - No JavaScript in a README. All motion is CSS `@keyframes` inside the SVGs,
   which GitHub serves as images; image SVGs still run CSS animations.
+- Single playback: an SVG's animation clock starts when the image loads, so the
+  boot runs once per page load and then holds. It replays on a reload or a
+  fresh visit, which is the intended behaviour. An animated WebP or APNG
+  could also play once, but it would be a fixed recording: blurrier text,
+  several MB, and it couldn't refresh its numbers daily. The SVG is crisp,
+  about 190 KB, and regenerated from live data.
+- If the page opens in a background tab, browsers throttle or pause its
+  animations, so the boot may still be in progress, or already finished, when
+  the tab is brought forward. Either way it only ever moves forward and ends
+  on the final frame, which is the one guaranteed state.
 - One animation clock per image. The interface is a single SVG so every phase
   stays in sync. The connect icons are separate images, so they can't join
-  the boot timeline; they only have a slow glow.
+  the boot timeline; they are static, with a soft violet halo.
 - Links can't sit inside an SVG image, so the clickable icons live outside it,
   in the README.
 - `<picture>` with `media="(max-width: 600px)"` serves the stacked layout on

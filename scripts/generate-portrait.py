@@ -186,22 +186,22 @@ def underlay(img: np.ndarray) -> str:
     small = cv2.resize(img, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
     g = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
     g = np.clip((g - 0.12) * 1.25, 0, 1) ** 1.1
-    dark, light = np.array([23, 17, 13], np.float32), np.array([120, 231, 126], np.float32)  # BGR: #0d1117 -> #7ee787
+    dark, light = np.array([18, 11, 12], np.float32), np.array([255, 156, 183], np.float32)  # BGR: #0C0B12 -> #B79CFF
     duo = dark + (light - dark) * g[..., None]
     m = np.zeros((SIZE, SIZE), np.float32)
     cv2.circle(m, (SIZE // 2, SIZE // 2), int(CIRCLE[2] * SIZE / WORK) - 2, 1.0, -1)
     m = cv2.GaussianBlur(m, (0, 0), 3)[..., None]
-    duo = duo * m + np.array([23, 17, 13], np.float32) * (1 - m)
+    duo = duo * m + np.array([18, 11, 12], np.float32) * (1 - m)
     ok, buf = cv2.imencode(".jpg", duo.astype(np.uint8), [cv2.IMWRITE_JPEG_QUALITY, 72])
     return base64.b64encode(buf.tobytes()).decode()
 
 
 def write_svg(layers, img: np.ndarray):
     s = SIZE / WORK
-    style = {"guide": 'stroke="#2EA043" stroke-opacity=".55" stroke-width="1" stroke-dasharray="3 5"',
-             "shape": 'stroke="#E6EDF3" stroke-width="1.35"',
-             "tone": 'stroke="#7EE787" stroke-opacity=".55" stroke-width=".8"',
-             "detail": 'stroke="#C9D1D9" stroke-opacity=".7" stroke-width=".8"'}
+    style = {"guide": 'stroke="#6366F1" stroke-opacity=".7" stroke-width="1" stroke-dasharray="3 5"',
+             "shape": 'stroke="#ECE9F5" stroke-width="1.35"',
+             "tone": 'stroke="#B79CFF" stroke-opacity=".55" stroke-width=".8"',
+             "detail": 'stroke="#CFCAE0" stroke-opacity=".7" stroke-width=".8"'}
     parts = []
     counts = {}
     for name, lines in layers.items():
@@ -210,7 +210,7 @@ def write_svg(layers, img: np.ndarray):
         paths = "\n".join(f'    <path class="{name}" data-t="{t:.3f}" pathLength="1" d="{to_d(l, s)}"/>' for l, t in ordered)
         parts.append(f'  <g class="layer-{name}" fill="none" stroke-linecap="round" stroke-linejoin="round" {style[name]}>\n{paths}\n  </g>')
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {SIZE} {SIZE}" width="{SIZE}" height="{SIZE}" role="img" aria-label="Line-art portrait traced from the GitHub avatar: a hooded figure sitting on a mountain ridge at sunrise">
-  <rect width="{SIZE}" height="{SIZE}" fill="#0D1117"/>
+  <rect width="{SIZE}" height="{SIZE}" fill="#0C0B12"/>
   <!--UNDERLAY-START--><image class="underlay" href="data:image/jpeg;base64,{underlay(img)}" width="{SIZE}" height="{SIZE}" opacity=".32"/><!--UNDERLAY-END-->
   <!--ART-START-->
 {chr(10).join(parts)}
@@ -222,8 +222,8 @@ def write_svg(layers, img: np.ndarray):
 
 
 def preview(layers):
-    canvas = np.full((WORK, WORK, 3), (23, 17, 13), np.uint8)
-    col = {"guide": (64, 160, 46), "tone": (126, 231, 126), "detail": (217, 209, 201), "shape": (243, 237, 230)}
+    canvas = np.full((WORK, WORK, 3), (18, 11, 12), np.uint8)
+    col = {"guide": (241, 102, 99), "tone": (255, 156, 183), "detail": (217, 209, 201), "shape": (243, 237, 230)}
     for name in ("guide", "tone", "detail", "shape"):
         for l in layers[name]:
             cv2.polylines(canvas, [l.astype(np.int32)], False, col[name], 1, cv2.LINE_AA)
