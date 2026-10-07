@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 112" width="96" height="112" role="img" aria-label="PORTFOLIO">
   <defs>
-    <radialGradient id="h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#5CC8FF" stop-opacity=".35"/><stop offset="1" stop-color="#5CC8FF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#3FB950" stop-opacity=".35"/><stop offset="1" stop-color="#3FB950" stop-opacity="0"/></radialGradient>
   </defs>
   <style>
     .sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Helvetica Neue',Arial,sans-serif}
@@ -10,7 +10,7 @@
     @media (prefers-reduced-motion:reduce){*{animation:none!important}}
   </style>
   <circle class="halo" cx="48" cy="40" r="40" fill="url(#h)"/>
-  <rect x="16" y="8" width="64" height="64" rx="18" fill="#0A0E14" stroke="#24506A" stroke-width="1.5"/>
+  <rect x="16" y="8" width="64" height="64" rx="18" fill="#0D1117" stroke="#238636" stroke-width="1.5"/>
   <g transform="translate(36 28)" fill="none" stroke="#EEF1F5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2c3 3.2 4.4 6.6 4.4 10S15 18.8 12 22M12 2C9 5.2 7.6 8.6 7.6 12S9 18.8 12 22"/></g>
-  <text x="48" y="100" class="mono" font-size="10.5" font-weight="700" fill="#6B8196" letter-spacing="1.6" text-anchor="middle">PORTFOLIO</text>
+  <text x="48" y="100" class="mono" font-size="10.5" font-weight="700" fill="#8B949E" letter-spacing="1.6" text-anchor="middle">PORTFOLIO</text>
 </svg>

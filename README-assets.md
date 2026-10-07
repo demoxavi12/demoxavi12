@@ -1,100 +1,113 @@
-# Profile assets: how this README is built
+# How this profile is built
 
-Everything the profile shows is a file in this repository. There are no
-third-party stats widgets, no icon fonts, no external fonts and no JavaScript
-in `README.md`.
+The profile is one animated interface, `assets/generated/profile.svg`, that
+"boots up" the way the reference reel does, plus a stacked version for phones
+and a row of links. `README.md` only assembles those images. There is no
+JavaScript, no third-party stats service, and no external font anywhere.
 
 ```
-.
-├── README.md                          the profile
-├── README-assets.md                   this file
-├── .github/workflows/telemetry.yml    daily telemetry refresh
-├── assets/
-│   ├── hero/       player-original.png  player.gif  identity.svg
-│   ├── labels/     stack · log · exploring · telemetry · connect (.svg)
-│   ├── tech/       constellation.svg
-│   ├── system/     build-log.svg
-│   ├── exploring/  dsa · backend · ai · product (.svg)
-│   ├── generated/  telemetry.svg        written by scripts/generate-telemetry.mjs
-│   └── connect/    github · linkedin · leetcode · portfolio · mail (.svg)
-└── scripts/
-    ├── generate-hero-art.py
-    └── generate-telemetry.mjs
+README.md                         the profile: interface + connect icons
+README-assets.md                  this file
+.github/workflows/telemetry.yml   daily re-render from live GitHub data
+assets/
+  generated/profile.svg           desktop interface, 880 px   (generated)
+  generated/profile-mobile.svg    stacked interface, 420 px   (generated)
+  portrait/avatar.png             the GitHub avatar, source of the portrait
+  portrait/portrait.svg           line art traced from it     (generated)
+  connect/*.svg                   GitHub, LinkedIn, Portfolio, LeetCode, Email
+scripts/
+  generate-portrait.py            avatar -> portrait.svg
+  generate-profile.mjs            GitHub data + portrait -> profile*.svg
 ```
 
-## Setup
-
-The profile repo is `demoxavi12/demoxavi12`. For the telemetry to refresh:
-**Settings → Actions → General → Workflow permissions → Read and write**, then
-**Actions → telemetry → Run workflow** once. It then runs daily at 03:17 UTC and
-only commits when the numbers change.
-
-## Composition
-
-Energy steps down as you scroll:
-
-| Section             | Intensity | Motion                                                        |
-|---------------------|-----------|---------------------------------------------------------------|
-| hero                | ★★★★★     | pixel-art loop · scrolling grid · particles · light streaks · name shine · orbit |
-| tech constellation  | ★★★★      | data flowing along edges · particles travel to each core node · halos · core wave |
-| engineering log     | ★★★       | a comet runs down the timeline · NOW ring                     |
-| currently exploring | ★★★       | status pulse · an edge glint                                  |
-| telemetry           | ★★★       | chart scan cursor · LIVE pulse                                |
-| connect             | ★★        | slow halo breathing                                           |
-| footer              | ★         | text only                                                     |
-
-The hero is two images: `player.gif` (360 px) and `identity.svg` (450 px). Side by
-side they total 810 px, which fits GitHub's ~831 px profile column on wide
-screens. On laptops and phones they wrap, and the art stacks above the name.
-The exploring cards (280 px) wrap the same way: 2×2 on desktop, one column on phones.
-
-Colour tokens: background `#07090C`, hairline `#16202B`, text `#EEF1F5`,
-secondary `#8A94A3`, and the single accent `#5CC8FF`. Labels that sit directly
-on GitHub's page background use `#6B8196`, which reads on both themes. Every
-animation is CSS or SMIL inside the SVG, and all of it stops under `prefers-reduced-motion`.
-
-## Hero art: `scripts/generate-hero-art.py`
+## Run it
 
 ```bash
-pip install pillow numpy opencv-python-headless
-python scripts/generate-hero-art.py --preview   # → assets/hero/player.gif (+ preview sheet)
+pip install numpy opencv-python-headless       # portrait only
+python scripts/generate-portrait.py --refresh  # re-download the avatar and trace it
+node scripts/generate-profile.mjs              # fetch live data, render both SVGs
+node scripts/generate-profile.mjs --cached     # re-render from the last fetch (.cache/)
 ```
 
-1. **Isolate:** GrabCut separates the player and ball from the energy sphere,
-   seeded with ellipses tuned to this image.
-2. **Pixelate:** the image is resampled to 180×215 art pixels and mapped to one
-   shared ~97-colour palette with Bayer ordered dithering. It's then upscaled ×2
-   with nearest-neighbour and given CRT row shading.
-3. **Animate (6 s loop, 10 fps):**
-   - the arena (player inpainted out) drifts 1 px behind him (parallax)
-   - the sphere's hex lines breathe, and an energy arc sweeps around it
-   - two layers of sparks rise off the floor
-   - the ball's glow pulses
-   - one scan line passes
-4. **Encode:** the exact palette (190 colours) is shared by every frame, and
-   frames are delta-encoded. Result: 3.4 MB.
+Without a token the GitHub API allows 60 requests an hour. A render uses about
+a dozen, so use `--cached` while you are tweaking the design.
 
-The player is never redrawn or warped; every sprite pixel comes from the image.
-Tuning constants (sphere, ball, segmentation seeds) sit at the top of the script.
+Preview: open `assets/generated/profile.svg` in a browser. To freeze a moment,
+open the browser console on that tab and run
+`document.getAnimations().forEach(a => { a.pause(); a.currentTime = 4000 })`
+(4000 = 4 s into the loop).
 
-## Telemetry: `scripts/generate-telemetry.mjs`
+## The boot sequence (16 s loop)
 
-`node scripts/generate-telemetry.mjs` (Node 18+, no installs).
+| Time       | What happens                                                            |
+|------------|-------------------------------------------------------------------------|
+| 0.0–0.9 s  | power-on sweep; `[ ok ]` init lines tick in; status reads BOOTING      |
+| 0.9–1.9 s  | `swaraj@github ~ $ ./contributions.sh` types out                        |
+| 2.1–4.7 s  | contribution grid fills left to right behind a glowing wavefront; each cell flashes bright and settles to its real shade |
+| 2.4–3.0 s  | `$ whoami` types out                                                    |
+| 3.0–8.2 s  | the portrait draws itself: dashed construction guides → glowing silhouette → scene lines → hatching → the duotone render fades in under a scan line, with particles drifting off it |
+| 3.2–4.0 s  | name, role and bio slide in                                             |
+| 3.7–5.3 s  | six stat tiles appear and their numbers count up                       |
+| 4.7–6.1 s  | contributions-per-month bars grow left to right; the peak glows         |
+| 5.9 s      | language share appears                                                  |
+| 6.3–8.6 s  | `$ cat stack.txt` types, then the stack types out                       |
+| 9.0 s      | status flips to ● ONLINE; the status bar appears                        |
+| 9–15.3 s   | hold on the finished profile                                            |
+| 15.3–16 s  | fade out, loop                                                          |
 
-- Repos and languages: GitHub REST API, public non-fork repos. Language share
-  is by bytes.
-- Contributions: GraphQL `contributionCalendar` with `GITHUB_TOKEN` (in the
-  Action), or the public contributions page (local runs).
-- Activity log: a GitHub-style heatmap of the last year (weeks as columns,
-  Sunday first). Cells are shaded by quartiles of the active days, as GitHub
-  does, and the best single day is ringed and listed in the BEST DAY tile.
-- Weekly: a small line of the last 52 weeks, summed from the same days.
+Every element's resting style is its finished state. So a viewer that does
+not animate, or has reduced motion turned on, sees the complete profile and
+never a blank one.
 
-## GitHub compatibility
+## The portrait
 
-- The only HTML used is what GitHub keeps: `p align="center"`, `img` with
-  `width`/`alt`, `a`, `br`, `sub`, `code`. The README was rendered through
-  GitHub's Markdown API to confirm this.
-- SVGs are loaded as images, so scripts never run, but their CSS/SMIL animation plays.
-- Brand glyphs (GitHub, LinkedIn, LeetCode) are from Simple Icons (CC0),
-  embedded as paths in the icon SVGs.
+`generate-portrait.py` traces the avatar. It never invents anything:
+
+- **silhouette:** GrabCut separates the hooded figure from the scene, and its
+  outline becomes the main glowing line.
+- **folds:** Canny edges inside the figure.
+- **hatching:** engraving-style strokes, only in the figure's shadows,
+  crossed where they are darkest.
+- **scene:** sparse edges for the ridgelines, clouds and rocks.
+- **guides:** the frame ring, the horizon and the sun.
+- **render:** a green duotone of the avatar, embedded as a small JPEG, that
+  fades in last.
+
+Each path is tagged with its layer and a top-to-bottom order (`data-t`).
+`generate-profile.mjs` turns that order into the drawing animation. The
+seed coordinates at the top of the script (figure ellipses, horizon, sun) are
+tuned for the current avatar. If you change the avatar, re-tune them and run
+it again.
+
+## Data
+
+Every number comes from GitHub. Repositories and languages use the REST API
+(public, non-fork, non-archived repos). Contributions use the GraphQL calendar
+in CI and the public contributions page locally. Derived values:
+
+- **current streak:** consecutive active days up to today. Today may still be
+  empty, so it can start from yesterday.
+- **best day:** the single day with the most contributions.
+- **heatmap shades:** quartiles of the active days, the way GitHub shades them.
+- **phone layout:** the last 26 weeks of the grid. The total is still the full year.
+
+The Action runs daily (and on demand). It only commits when the numbers
+change, not when just the sync date does. It needs **Settings → Actions →
+General → Workflow permissions → Read and write**.
+
+## GitHub limits that shaped this
+
+- No JavaScript in a README. All motion is CSS `@keyframes` inside the SVGs,
+  which GitHub serves as images; image SVGs still run CSS animations.
+- One animation clock per image. The interface is a single SVG so every phase
+  stays in sync. The connect icons are separate images, so they can't join
+  the boot timeline; they only have a slow glow.
+- Links can't sit inside an SVG image, so the clickable icons live outside it,
+  in the README.
+- `<picture>` with `media="(max-width: 600px)"` serves the stacked layout on
+  narrow screens. The GitHub mobile app may still show the desktop SVG, scaled
+  down.
+- Text in an SVG image uses the viewer's system fonts (SF Mono, Consolas,
+  Menlo…), so letter widths vary a little. The typing covers allow for that.
+- GitHub caches images through its camo proxy, so a new render can take a few
+  minutes to show up.
